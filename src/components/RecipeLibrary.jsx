@@ -101,7 +101,13 @@ export default function RecipeLibrary({ recipes, setRecipes, settings }) {
         throw new Error('No JSON found in AI response. Raw: ' + text.substring(0, 300))
       }
       const jsonString = text.substring(jsonStart, jsonEnd + 1)
-      const parsed = JSON.parse(jsonString)
+      
+      let parsed
+      try {
+        parsed = JSON.parse(jsonString)
+      } catch (parseErr) {
+        throw new Error('JSON parse failed. Extracted string: ' + jsonString.substring(0, 500) + ' ... Parse error: ' + parseErr.message)
+      }
 
       setNewRecipe({
         name: parsed.name || '',
