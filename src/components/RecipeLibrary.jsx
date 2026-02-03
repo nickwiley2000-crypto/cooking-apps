@@ -29,10 +29,30 @@ export default function RecipeLibrary({ recipes, setRecipes, settings }) {
 
   const fileToBase64 = (file) => {
     return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result.split(',')[1])
-      reader.onerror = reject
-      reader.readAsDataURL(file)
+      try {
+        const reader = new FileReader()
+        reader.onload = () => {
+          try {
+            const result = reader.result
+            if (!result || typeof result !== 'string') {
+              reject(new Error('FileReader result was empty or invalid'))
+              return
+            }
+            const base64 = result.split(',')[1]
+            if (!base64) {
+              reject(new Error('Could not extract base64 from FileReader result'))
+              return
+            }
+            resolve(base64)
+          } catch (e) {
+            reject(new Error('Error processing FileReader result: ' + e.message))
+          }
+        }
+        reader.onerror = () => reject(new Error('FileReader error: ' + (reader.error?.message || 'unknown')))
+        reader.readAsDataURL(file)
+      } catch (e) {
+        reject(new Error('Error starting FileReader: ' + e.message))
+      }
     })
   }
 
@@ -137,6 +157,18 @@ export default function RecipeLibrary({ recipes, setRecipes, settings }) {
 
   const handleImageUpload = (e) => {
     const file = e.target.files?.[0]
+    if (!file) return
+    
+    // Check file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const fileType = file.type.toLowerCase()
+    
+    if (!validTypes.includes(fileType)) {
+      setScanError(`This file format (${fileType || 'unknown'}) is not supported. Please use JPG, PNG, or WEBP. iPhone HEIC photos need to be converted first - try emailing the photo to yourself or saving it from Photos app in a different format.`)
+      e.target.value = ''
+      return
+    }
+    
     if (file) scanRecipeImage(file)
     e.target.value = ''
   }
